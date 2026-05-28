@@ -1,0 +1,3 @@
+## 2025-03-01 - [Keyboard Accessibility for Custom File Upload Wrappers]
+**Learning:** When hiding native `<input type="file">` elements and using custom `<div>` wrappers for visual styling, the custom wrapper naturally loses native keyboard accessibility. Keyboard users cannot tab to it or activate it with Enter/Space.
+**Action:** Always ensure that custom wrappers replacing native inputs have `role="button"`, `tabIndex={0}`, an appropriate `aria-label`, an `onKeyDown` handler (for `Enter` and `Space`), and visual focus styles (`focus-visible`) to restore standard keyboard interactions.
