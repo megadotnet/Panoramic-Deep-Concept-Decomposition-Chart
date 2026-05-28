@@ -1,0 +1,103 @@
+name: Build and Archive
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'components/**'
+      - 'services/**'
+      - '*.tsx'
+      - '*.ts'
+      - 'index.html'
+      - 'vite.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'components/**'
+      - 'services/**'
+      - '*.tsx'
+      - '*.ts'
+      - 'index.html'
+      - 'vite.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-archive:
+    name: Build and Archive
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          echo "Starting dependency installation (npm ci)..."
+          npm ci || { echo "::error::Failed to install dependencies. Check package-lock.json or network."; exit 1; }
+          echo "Dependencies installed successfully."
+
+      - name: Compile and Build
+        run: |
+          echo "Starting compilation and build process..."
+          npm run build || { echo "::error::Compilation failed. Please check for syntax errors or missing dependencies."; exit 1; }
+          echo "Build completed successfully."
+
+      - name: Prepare Archive Information
+        id: prepare-vars
+        run: |
+          echo "Extracting dynamic variables for archive naming..."
+
+          # Branch Name
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BRANCH_NAME="${{ github.head_ref }}"
+          else
+            BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          fi
+
+          # Sanitize branch name for valid file naming
+          BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9-]/_/g')
+
+          # Commit Hash
+          COMMIT_HASH=$(echo "${{ github.sha }}" | cut -c1-7)
+
+          # Timestamp
+          TIMESTAMP=$(date -u +'%Y%m%d%H%M%S')
+
+          ARCHIVE_NAME="dist-${BRANCH_NAME}-${COMMIT_HASH}-${TIMESTAMP}.zip"
+          echo "ARCHIVE_NAME=${ARCHIVE_NAME}" >> "$GITHUB_ENV"
+
+          echo "Archive name prepared: ${ARCHIVE_NAME}"
+
+      - name: Archive dist folder
+        run: |
+          echo "Creating ZIP archive of the dist folder..."
+          if [ ! -d "dist" ]; then
+            echo "::error::Build directory 'dist' does not exist. Build may have failed silently."
+            exit 1
+          fi
+          zip -r "${ARCHIVE_NAME}" dist/ || { echo "::error::Failed to compress dist folder."; exit 1; }
+          echo "Archive ${ARCHIVE_NAME} created successfully."
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARCHIVE_NAME }}
+          path: ${{ env.ARCHIVE_NAME }}
+          retention-days: 30
