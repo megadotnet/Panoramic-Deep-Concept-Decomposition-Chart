@@ -30,12 +30,23 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelected, c
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      fileInputRef.current?.click();
+    }
+  };
+
   return (
     <div 
-      className="w-full relative group cursor-pointer"
+      className="w-full relative group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-xl"
       onClick={() => fileInputRef.current?.click()}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label={currentImage ? "Change uploaded image" : "Upload an image"}
     >
       <input 
         type="file" 
